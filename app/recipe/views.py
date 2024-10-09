@@ -25,6 +25,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return super().get_serializer_class()
 
 
+    def perform_create(self, serializer):
+        # Assign the current user to the recipe before saving
+        return serializer.save(user=self.request.user)
+
+
 
 
 
