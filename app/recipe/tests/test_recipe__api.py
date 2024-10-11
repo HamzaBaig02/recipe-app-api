@@ -6,10 +6,11 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Recipe, Tag
+from core.models import Recipe, Tag, Ingredient
 from recipe.serializers import RecipeSerializer, RecipeDetailSerializer
 
 RECIPES_URL = reverse("recipe:recipe-list")
+# INGREDIENTS_URL = reverse("recipe:ingredient-list")
 
 
 def detail_url(recipe_id):
@@ -29,10 +30,12 @@ def create_recipe(user, **params):
 
     tag1 = Tag.objects.create(name="Original Tag 1")
     tag2 = Tag.objects.create(name="Original Tag 2")
-
+    ingredient1 = Ingredient.objects.create(name='Ingredient 1')
+    ingredient2 = Ingredient.objects.create(name='Ingredient 2')
     recipe = Recipe.objects.create(user=user, **defaults)
 
     recipe.tags.add(tag1, tag2)
+    recipe.ingredients.add(ingredient1,ingredient2)
 
     return recipe
 
@@ -191,7 +194,6 @@ class PrivateRecipeAPITests(TestCase):
 
         self.assertEqual(tag_count, 2)
 
-
     def test_update_recipe_with_tags(self):
         payload = {
             "tags": [{"name": "Updated Tag 1"}, {"name": "Updated Tag 2"}]
@@ -199,7 +201,7 @@ class PrivateRecipeAPITests(TestCase):
 
         recipe = create_recipe(user=self.user)
 
-        url = url = detail_url(recipe.id)
+        url = detail_url(recipe.id)
 
         res = self.client.patch(url, data=json.dumps(payload), content_type='application/json')
 
@@ -217,3 +219,57 @@ class PrivateRecipeAPITests(TestCase):
         self.assertNotIn("Original Tag 2", tag_names)
 
         self.assertEqual(tags.count(), 2)
+
+    def test_create_recipe_with_ingredients(self):
+        payload = {
+            "title": "Test Recipe Title",
+            "time_minutes": 10,
+            "price": "5.00",
+            "link": "https://example.com/test-recipe",
+            "tags": [{"name": "Test Tag 1"}, {"name": "Test Tag 2"}],
+            "ingredients": [
+                {"name": "Test Ingredient 1"},
+                {"name": "Test Ingredient 2"},
+            ],
+            "description": "This is a test recipe description for testing purposes.",
+        }
+
+        res = self.client.post(
+            RECIPES_URL, data=json.dumps(payload), content_type="application/json"
+        )
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        ingredient_count = Ingredient.objects.all().count()
+
+        self.assertEqual(ingredient_count, 2)
+
+
+    def test_update_recipe_with_ingredients(self):
+
+        recipe = create_recipe(user=self.user)
+
+        payload = {
+            "ingredients": [
+                {"name": "Updated Ingredient 1"},
+                {"name": "Updated Ingredient 2"}
+            ]
+        }
+
+        url = detail_url(recipe.id)
+
+        res = self.client.patch(url, data=json.dumps(payload), content_type='application/json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        recipe.refresh_from_db()
+
+        ingredients = recipe.ingredients.all()
+        ingredient_names = [ingredient.name for ingredient in ingredients]
+
+        self.assertIn("Updated Ingredient 1", ingredient_names)
+        self.assertIn("Updated Ingredient 2", ingredient_names)
+        self.assertNotIn("Ingredient 1", ingredient_names)
+        self.assertNotIn("Ingredient 2", ingredient_names)
+
+        self.assertEqual(ingredients.count(), 2)

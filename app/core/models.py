@@ -41,6 +41,13 @@ class Tag(models.Model):
         return self.name
 
 
+class Ingredient(models.Model):
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
+
+
 class Recipe(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -52,8 +59,10 @@ class Recipe(models.Model):
     price = models.DecimalField(max_digits=5,decimal_places=2)
     link = models.CharField(max_length=255,blank=True)
     tags = models.ManyToManyField(Tag,blank=True,null=True)
+    ingredients = models.ManyToManyField(Ingredient,blank=True,null=True)
 
     def __str__(self):
         return self.title
+
 
 

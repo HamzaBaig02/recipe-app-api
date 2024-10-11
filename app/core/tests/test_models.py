@@ -111,6 +111,33 @@ class ModelTests(TestCase):
         self.assertIn(tag2,tags)
         self.assertIn(tag3,tags)
 
+    def test_create_ingredients_model(self):
+
+        user = get_user_model().objects.create_user(
+            'test@example.com',
+            'testpass123'
+        )
+
+        recipe = models.Recipe.objects.create(
+            user=user,
+            title='Sample recipe name',
+            time_minutes=5,
+            price=Decimal('5.50'),
+            description='Sample recipe description'
+        )
+
+        ingredient = models.Ingredient.objects.create(name='Sample Ingredient')
+        ingredient2 = models.Ingredient.objects.create(name='Sample Ingredient2')
+
+        self.assertEqual(str(ingredient),ingredient.name)
+
+        recipe.ingredients.add(ingredient,ingredient2)
+
+        ingredients = recipe.ingredients.all()
+
+        self.assertIn(ingredient, ingredients)
+        self.assertIn(ingredient2, ingredients)
+
 
 
 
