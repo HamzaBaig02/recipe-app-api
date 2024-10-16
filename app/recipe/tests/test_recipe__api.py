@@ -5,7 +5,9 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
-
+import tempfile
+import os
+from PIL import Image
 from core.models import Recipe, Tag, Ingredient
 from recipe.serializers import RecipeSerializer, RecipeDetailSerializer
 
@@ -15,6 +17,9 @@ RECIPES_URL = reverse("recipe:recipe-list")
 
 def detail_url(recipe_id):
     return reverse("recipe:recipe-detail", args=[recipe_id])
+
+def image_upload_url(recipe_id):
+    return reverse('recipe:reipe-upload-image', args=[recipe_id])
 
 
 def create_recipe(user, **params):
@@ -273,3 +278,47 @@ class PrivateRecipeAPITests(TestCase):
         self.assertNotIn("Ingredient 2", ingredient_names)
 
         self.assertEqual(ingredients.count(), 2)
+
+
+class ImageUploadTests(TestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = get_user_model().objects.create_user(
+            'user@example.com',
+            'password123'
+        )
+        self.client.force_authenticate(self.user)
+        self.recipe = create_recipe(user=self.user)
+
+    def tearDown(self):
+        self.recipe.image.delete()
+
+    def test_upload_image(self):
+
+        url = image_upload_url(self.recipe.id)
+        # Create a temporary file with a `.jpeg` extension
+        with tempfile.NamedTemporaryFile(suffix='.jpeg') as image_file:
+
+            # Create a new image with 'RGB' mode and size 10x10 pixels
+            img = Image.new('RGB', (10, 10))
+
+            # Save the image in the temporary file we created
+            img.save(image_file)
+
+            # Move the file pointer back to the beginning of the file
+            # (necessary before reading or sending the file)
+            image_file.seek(0)
+
+            # Create a payload that contains the image file
+            # 'image_file' is treated as a file object to be sent in a POST request
+            payload = {'image': image_file}
+
+            # Send a POST request with the image as part of a multipart/form-data payload
+            # 'self.client.post()' is typically part of a test client in Django or a similar framework
+            res = self.client.post(url, payload, format='multipart')
+
+        self.recipe.refresh_from_db()
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('image',res.data)
+        self.assertTrue(os.path.exists(self.recipe.image.path))
