@@ -16,27 +16,28 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        #overiding queryset method to retirve recipes for self.user
+        # overiding queryset method to retirve recipes for self.user
 
-        return self.queryset.filter(user=self.request.user).order_by('-id')
+        return self.queryset.filter(user=self.request.user).order_by("-id")
 
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == "list":
             return serializers.RecipeSerializer
-        elif self.action == 'upload_image':
+        elif self.action == "upload_image":
             return serializers.RecipeImageSerializer
 
         return super().get_serializer_class()
-
 
     def perform_create(self, serializer):
         # Assign the current user to the recipe before saving
         return serializer.save(user=self.request.user)
 
-    @action(methods=['POST'], detail=True, url_path='upload-image')
+    @action(methods=["POST"], detail=True, url_path="upload-image")
     def upload_image(self, request, pk=None):
         recipe = self.get_object()
-        serializer = self.get_serializer(recipe, data=request.data)
+        serializer = self.get_serializer(
+            recipe, data=request.data
+        )  # Passing the recipe object into the serializer ensures that the serializer performs a partial update on the correct instance of the Recipe model, rather than creating a new one or modifying the wrong object. It provides context for the serializer to know which recipe is being modified and how to handle the incoming data in relation to that object.
 
         if serializer.is_valid():
             serializer.save()
@@ -44,15 +45,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class IngredientViewSet(mixins.UpdateModelMixin, mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+
+class IngredientViewSet(
+    mixins.UpdateModelMixin,
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = serializers.IngredientSerializer
     queryset = Ingredient.objects.all()
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
-
-
-
-
-
-
-
